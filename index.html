@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Will Costa — Arquitetura de IA aplicada</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F3EA; --paper-2:#EFEBDD;
+  --ink:#0F2733; --ink-soft:#3A5866;
+  --blue:#3A6B87; --blue-soft:#7FA0B3;
+  --copper:#B5652E; --copper-soft:#E7C8AE;
+  --line:#D9D2BF; --line-strong:#B7AF97;
+  --serif:'Fraunces',serif; --sans:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);line-height:1.6;
+  background-image:radial-gradient(var(--line) .6px,transparent .6px);background-size:22px 22px}
+a{color:var(--blue)}
+:focus-visible{outline:2px solid var(--copper);outline-offset:3px}
+.wrap{max-width:960px;margin:0 auto;padding:0 28px}
+.mono{font-family:var(--mono)}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--copper)}
+
+.reg{position:fixed;width:16px;height:16px;pointer-events:none;opacity:.55;z-index:5}
+.reg::before,.reg::after{content:'';position:absolute;background:var(--ink-soft)}
+.reg::before{width:100%;height:1px;top:50%}
+.reg::after{width:1px;height:100%;left:50%}
+.reg.tl{top:18px;left:18px}.reg.tr{top:18px;right:18px}.reg.bl{bottom:18px;left:18px}.reg.br{bottom:18px;right:18px}
+
+nav{position:sticky;top:0;background:rgba(246,243,234,.92);backdrop-filter:blur(6px);border-bottom:1px solid var(--line);z-index:10}
+nav .wrap{display:flex;gap:22px;padding:14px 28px;font-family:var(--mono);font-size:12px;overflow-x:auto}
+nav a{color:var(--ink-soft);text-decoration:none;white-space:nowrap}
+nav a:hover{color:var(--copper)}
+
+header{padding:56px 0 40px;border-bottom:1px solid var(--line)}
+.title-block{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+h1{font-family:var(--serif);font-weight:500;font-size:clamp(34px,5vw,52px);margin:8px 0 0;letter-spacing:-.01em}
+.role{font-family:var(--mono);font-size:13px;color:var(--ink-soft);margin-top:10px;max-width:46ch}
+.stamp{font-family:var(--mono);font-size:11px;color:var(--ink-soft);text-align:right;line-height:1.8;
+  border:1px solid var(--line-strong);padding:10px 14px;white-space:nowrap}
+.stamp b{color:var(--copper)}
+
+section{padding:56px 0;border-bottom:1px solid var(--line)}
+h2{font-family:var(--serif);font-weight:500;font-size:26px;margin:6px 0 22px;letter-spacing:-.01em}
+p.lede{font-size:16px;max-width:64ch;color:var(--ink-soft)}
+
+/* bio */
+.bio p{font-size:15.5px;max-width:68ch;color:var(--ink);margin:0 0 16px}
+.bio p:last-child{margin-bottom:0}
+
+/* skills */
+.skills-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);margin-top:8px}
+.skill-cat{background:var(--paper);padding:20px 20px 22px}
+.skill-cat h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--copper);margin:0 0 12px}
+.skill-cat ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.skill-cat li{font-size:12.5px;font-family:var(--sans);color:var(--ink);background:var(--paper-2);border:1px solid var(--line);padding:4px 9px;border-radius:2px}
+
+/* timeline */
+.timeline{margin-top:8px;border-left:1px solid var(--line-strong);padding-left:26px;display:grid;gap:34px}
+.tl-item{position:relative}
+.tl-item::before{content:'';position:absolute;left:-31px;top:5px;width:9px;height:9px;border:1.5px solid var(--copper);background:var(--paper);border-radius:50%}
+.tl-item .when{font-family:var(--mono);font-size:11px;color:var(--blue);letter-spacing:.04em}
+.tl-item h3{font-family:var(--sans);font-weight:600;font-size:16px;margin:4px 0 2px}
+.tl-item .org{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-bottom:8px}
+.tl-item p{font-size:14.5px;color:var(--ink-soft);margin:0;max-width:64ch}
+.tl-item .metric{display:inline-block;font-family:var(--mono);font-size:12px;color:var(--copper);background:var(--copper-soft);padding:2px 8px;border-radius:2px;margin-top:8px}
+
+/* education */
+.edu-list{display:grid;gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);margin-top:8px}
+.edu-item{background:var(--paper);padding:16px 20px;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:baseline}
+.edu-item .deg{font-weight:600;font-size:14.5px}
+.edu-item .school{font-family:var(--mono);font-size:12px;color:var(--ink-soft)}
+.edu-item .when{font-family:var(--mono);font-size:11.5px;color:var(--blue-soft);white-space:nowrap}
+
+/* projects */
+.proj{margin-top:44px;padding-top:44px;border-top:1px dashed var(--line-strong)}
+.proj:first-child{margin-top:0;padding-top:0;border-top:none}
+.proj-head{display:flex;justify-content:space-between;align-items:baseline;gap:16px;flex-wrap:wrap}
+.proj-num{font-family:var(--mono);font-size:12px;color:var(--copper)}
+.proj-status{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--blue-soft);color:var(--blue);padding:3px 8px}
+.proj h3{font-family:var(--serif);font-weight:500;font-size:22px;margin:6px 0 10px}
+.proj p.desc{font-size:14.5px;color:var(--ink-soft);max-width:66ch;margin:0 0 14px}
+.proj .stack{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.proj .stack span{font-family:var(--mono);font-size:11px;color:var(--ink-soft);border:1px solid var(--line);padding:3px 8px}
+.proj .result{font-family:var(--mono);font-size:12.5px;color:var(--copper)}
+
+.blueprint{margin-top:24px;border:1px solid var(--ink);background:var(--ink);border-radius:2px;padding:34px 24px 26px;position:relative}
+.blueprint .frame-label{position:absolute;top:10px;left:16px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;color:var(--blue-soft);text-transform:uppercase}
+.blueprint svg{width:100%;height:auto;display:block}
+
+.shot{margin-top:22px;border:1px solid var(--line-strong);background:var(--paper-2);position:relative;min-height:220px;
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:20px}
+.shot img{width:100%;height:auto;display:block}
+.shot .placeholder{font-family:var(--mono);font-size:11.5px;color:var(--ink-soft);line-height:1.8;max-width:36ch}
+.shot .placeholder b{color:var(--copper);display:block;font-size:12.5px;margin-bottom:4px}
+.shot-cap{font-family:var(--mono);font-size:10.5px;color:var(--ink-soft);margin-top:8px;letter-spacing:.02em}
+
+.reqs{display:grid;gap:1px;background:var(--line-strong);border:1px solid var(--line-strong);margin-top:8px}
+.req{background:var(--paper);padding:18px 20px;display:grid;grid-template-columns:180px 1fr;gap:16px;align-items:start}
+@media(max-width:640px){.req{grid-template-columns:1fr}}
+.req .label{font-family:var(--mono);font-size:11.5px;letter-spacing:.04em;color:var(--copper);text-transform:uppercase;line-height:1.5}
+.req .body{font-size:14px;color:var(--ink)}
+.req .body b{color:var(--ink)}
+
+.limits{background:var(--paper-2);border:1px dashed var(--line-strong);padding:18px 20px;margin-top:16px}
+.limits strong{font-family:var(--mono);font-size:11.5px;letter-spacing:.05em;color:var(--ink-soft)}
+.limits ul{margin:10px 0 0;padding-left:18px}
+.limits li{font-size:13.5px;color:var(--ink-soft);margin-bottom:6px}
+
+.cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:18px}
+.btn{font-family:var(--mono);font-size:13px;padding:11px 18px;border:1px solid var(--ink);text-decoration:none;color:var(--ink);
+  display:inline-flex;align-items:center;gap:8px;background:var(--paper);transition:background .15s,color .15s}
+.btn:hover{background:var(--ink);color:var(--paper)}
+.btn.primary{background:var(--copper);border-color:var(--copper);color:var(--paper)}
+.btn.primary:hover{background:var(--ink);border-color:var(--ink)}
+
+.contact-cta{background:var(--ink);color:var(--paper-2);text-align:center;padding:64px 0}
+.contact-cta h2{color:var(--paper)}
+.contact-cta p{color:var(--blue-soft);max-width:50ch;margin:0 auto 24px}
+.contact-cta .btn{border-color:var(--paper-2);color:var(--paper)}
+.contact-cta .btn:hover{background:var(--paper);color:var(--ink)}
+.contact-cta .btn.primary{background:var(--copper);border-color:var(--copper);color:var(--paper)}
+
+footer{padding:32px 0 60px;font-family:var(--mono);font-size:12px;color:var(--ink-soft);display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+
+<div class="reg tl"></div><div class="reg tr"></div><div class="reg bl"></div><div class="reg br"></div>
+
+<nav><div class="wrap">
+  <a href="#sobre">Sobre</a><a href="#ferramentas">Ferramentas</a><a href="#experiencia">Experiência</a>
+  <a href="#formacao">Formação</a><a href="#projetos">Projetos</a><a href="#contato">Contato</a>
+</div></nav>
+
+<div class="wrap">
+<header>
+  <p class="eyebrow">Portfólio técnico</p>
+  <div class="title-block">
+    <div>
+      <h1>Will Costa</h1>
+      <p class="role">Arquitetura de IA aplicada a sistemas de produção — agentes com validação humana, automação de workflow, inteligência de mercado orientada a dados.</p>
+    </div>
+    <div class="stamp">
+      MACEIÓ, AL — BR<br>
+      REV.&nbsp;<b>04</b> · 2026<br>
+      DISPONÍVEL&nbsp;PARA&nbsp;NOVOS PROJETOS
+    </div>
+  </div>
+</header>
+
+<section id="sobre">
+  <p class="eyebrow">01 — Perfil</p>
+  <h2>Sobre mim</h2>
+  <div class="bio">
+    <p>Trabalho na fronteira entre dado, pessoas e sistemas de IA. Comecei em operações e gestão de pessoas — reduzi rotatividade voluntária de 25% para praticamente zero numa operação 24/7 nos EUA — e migrei para inteligência de mercado, onde passei três anos sustentando um portfólio analítico de mais de R$ 35 milhões/ano em receita monitorada na Multilaser Industrial.</p>
+    <p>Hoje construo, do zero, a função de inteligência de mercado do Sistema FIEA/SENAI em Alagoas: dashboards, modelos preditivos e sistemas multiagente de IA em produção, ligando bases de emprego (CAGED/RAIS), CRM comercial (Moskit) e fontes externas via automação. Também dou aula de sistemas empresariais e Java como professor adjunto.</p>
+    <p>O fio condutor da minha trajetória é o mesmo em toda função que já ocupei: pegar um problema sem estrutura — rotatividade alta, ausência de inteligência de mercado, dado espalhado em oito sistemas — e desenhar o sistema que resolve, com dado e com IA aplicada, não com intuição.</p>
+  </div>
+</section>
+
+<section id="ferramentas">
+  <p class="eyebrow">02 — Stack técnico</p>
+  <h2>Ferramentas e tecnologias</h2>
+  <div class="skills-grid">
+    <div class="skill-cat"><h3>IA &amp; Agentes</h3><ul>
+      <li>LLMs (Claude, GPT, DeepSeek)</li><li>Prompt engineering</li><li>Agentes multiagente</li>
+      <li>RAG</li><li>Embeddings / FAISS</li><li>n8n</li><li>Flowise</li>
+    </ul></div>
+    <div class="skill-cat"><h3>Dados &amp; Modelagem</h3><ul>
+      <li>SQL avançado</li><li>Python</li><li>Power BI</li><li>Star schema</li>
+      <li>XGBoost + SHAP</li><li>Google Looker Studio</li><li>Google Apps Script</li>
+    </ul></div>
+    <div class="skill-cat"><h3>Automação &amp; Integração</h3><ul>
+      <li>Workflows de produção (n8n)</li><li>APIs REST</li><li>CRM (Moskit)</li>
+      <li>WhatsApp Business</li><li>Google Sheets como staging</li>
+    </ul></div>
+    <div class="skill-cat"><h3>Inteligência de Mercado</h3><ul>
+      <li>CAGED / RAIS / CNPJ</li><li>Segmentação RFM</li><li>Benchmark competitivo</li>
+      <li>Modelagem de risco (dropout, churn)</li><li>Framework FIE</li>
+    </ul></div>
+    <div class="skill-cat"><h3>Pessoas &amp; Operação</h3><ul>
+      <li>People Analytics</li><li>HRBP</li><li>Redução de turnover</li>
+      <li>Liderança de equipe 24/7</li><li>Onboarding estruturado</li>
+    </ul></div>
+  </div>
+</section>
+
+<section id="experiencia">
+  <p class="eyebrow">03 — Trajetória</p>
+  <h2>Experiência</h2>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="when">JUN 2026 — ATUAL</div>
+      <h3>Analista de Inteligência de Dados e Mercado</h3>
+      <div class="org">Sistema FIEA / SENAI-AL · Maceió, Brasil</div>
+      <p>Construindo a função de inteligência de mercado do zero: dashboard unificado consolidando 27 indicadores de 8+ sistemas, modelo preditivo de evasão (XGBoost+SHAP), sistemas multiagente de IA em n8n/Flowise ligando CRM, dados públicos de emprego e enriquecimento automatizado.</p>
+    </div>
+    <div class="tl-item">
+      <div class="when">SET 2024 — ABR 2026</div>
+      <h3>Head of People and Operations</h3>
+      <div class="org">CareServe Environmental · Salt Lake City, EUA</div>
+      <p>Liderança de 20+ subordinados diretos em operação 24/7.</p>
+      <span class="metric">Rotatividade voluntária: 25% → quase zero em 10 meses</span>
+    </div>
+    <div class="tl-item">
+      <div class="when">NOV 2021 — AGO 2024</div>
+      <h3>Market Intelligence Specialist</h3>
+      <div class="org">Multilaser Industrial</div>
+      <p>Portfólio analítico sustentando mais de R$ 35 milhões/ano em receita monitorada, com dashboards em Power BI e inteligência competitiva.</p>
+    </div>
+    <div class="tl-item">
+      <div class="when">2021</div>
+      <h3>Business Analyst &amp; Data Strategy</h3>
+      <div class="org">Macrolub Atacado Automotivo</div>
+      <p>Base da fundação em análise de dados aplicada a decisão comercial.</p>
+    </div>
+    <div class="tl-item">
+      <div class="when">2016 — 2019</div>
+      <h3>Gestão de P&amp;L em hotelaria</h3>
+      <div class="org">Hotel Rio Jordão · Samba Hotéis</div>
+      <p>Início de carreira em operações e resultado financeiro direto.</p>
+    </div>
+    <div class="tl-item">
+      <div class="when">PARALELO</div>
+      <h3>Professor adjunto</h3>
+      <div class="org">Lumos College (EUA, remoto)</div>
+      <p>Sistemas Empresariais, Marketing Internacional e Java.</p>
+    </div>
+  </div>
+</section>
+
+<section id="formacao">
+  <p class="eyebrow">04 — Formação</p>
+  <h2>Formação acadêmica</h2>
+  <div class="edu-list">
+    <div class="edu-item"><div><div class="deg">MSc Management — ênfase em Data Science</div><div class="school">Faulkner University</div></div><div class="when">concluído ago/2026</div></div>
+    <div class="edu-item"><div><div class="deg">MBA em Marketing</div><div class="school">USP/Esalq</div></div><div class="when">2020 — 2021</div></div>
+    <div class="edu-item"><div><div class="deg">Bacharelado em Administração de Empresas</div><div class="school">BYU-Idaho, EUA</div></div><div class="when">2016 — 2019</div></div>
+    <div class="edu-item"><div><div class="deg">Formação contínua em agentes de IA</div><div class="school">Data Science Academy</div></div><div class="when">em andamento</div></div>
+  </div>
+</section>
+
+<section id="projetos">
+  <p class="eyebrow">05 — Estudos de caso</p>
+  <h2>Projetos</h2>
+  <p class="lede">Quatro projetos que mostram o mesmo padrão de trabalho em contextos diferentes: sistema multiagente em produção real, arquitetura de saúde desenhada ponta a ponta, motor de busca semântica aplicado a mercado de trabalho, e um conceito de matching validado por desafio real.</p>
+
+  <div class="proj">
+    <div class="proj-head"><span class="proj-num">PROJETO 01</span><span class="proj-status">Em produção</span></div>
+    <h3>Radar de Oportunidades — sistema multiagente de inteligência comercial</h3>
+    <p class="desc">Sistema em construção no Sistema FIEA/SENAI-AL: agentes de IA coletam notícias de investimento, classificam oportunidades por relevância geográfica e setorial, enriquecem com dados de CAGED/RAIS/CNPJ, e entregam briefing visual por e-mail à equipe comercial — com o fluxo de qualificação subindo para dentro do CRM institucional (Moskit).</p>
+    <div class="stack"><span>n8n</span><span>Flowise</span><span>Google Apps Script</span><span>SQL Server DW</span><span>Moskit CRM</span><span>CAGED/RAIS</span></div>
+    <div class="shot">
+      <img src="./assets/projeto-1-preview.png" alt="Captura de tela: dashboard do Radar de Oportunidades" loading="lazy"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="placeholder" style="display:none"><b>[ captura de tela ]</b>Adicione o arquivo <span class="mono">assets/projeto-1-preview.png</span> — print do dashboard Power BI ou do briefing por e-mail<br>recomendado: 1200×750px</div>
+    </div>
+    <p class="shot-cap">FIG. — visão do briefing entregue à equipe comercial</p>
+    <div class="cta">
+      <a class="btn primary" href="./README.md#projeto-1--radar-de-oportunidades">Saiba mais →</a>
+    </div>
+  </div>
+
+  <div class="proj">
+    <div class="proj-head"><span class="proj-num">PROJETO 02</span><span class="proj-status">Arquitetura / protótipo funcional</span></div>
+    <h3>Plataforma de acompanhamento de saúde com IA supervisionada</h3>
+    <p class="desc">Desenho e protótipo funcional de coaching de nutrição e treino por assinatura, com agentes de IA restritos a catálogo validado e aprovação humana obrigatória antes de qualquer entrega ao cliente — pensado para uma economia unitária de assinatura de baixo custo.</p>
+
+    <div class="blueprint">
+      <span class="frame-label">FIG. 01 — fluxo de aprovação</span>
+      <svg viewBox="0 0 860 210" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="#7FA0B3" stroke-width="1.3"/>
+          </marker>
+        </defs>
+        <g fill="none" stroke="#3A6B87" stroke-width="1">
+          <rect x="14" y="70" width="132" height="60" rx="2"/>
+          <rect x="196" y="70" width="132" height="60" rx="2"/>
+          <rect x="378" y="70" width="132" height="60" rx="2"/>
+          <rect x="560" y="20" width="132" height="60" rx="2"/>
+          <rect x="560" y="120" width="132" height="60" rx="2"/>
+          <rect x="742" y="70" width="104" height="60" rx="2"/>
+        </g>
+        <g fill="#EFEBDD" font-family="'IBM Plex Mono',monospace" font-size="11.5">
+          <text x="80" y="95" text-anchor="middle">WhatsApp</text>
+          <text x="80" y="112" text-anchor="middle" fill="#7FA0B3" font-size="9.5">canal + voz</text>
+          <text x="262" y="95" text-anchor="middle">Catálogo</text>
+          <text x="262" y="112" text-anchor="middle" fill="#7FA0B3" font-size="9.5">validado</text>
+          <text x="444" y="95" text-anchor="middle">Composição</text>
+          <text x="444" y="112" text-anchor="middle" fill="#7FA0B3" font-size="9.5">LLM + arquétipo</text>
+          <text x="626" y="45" text-anchor="middle">Revisão</text>
+          <text x="626" y="61" text-anchor="middle" fill="#7FA0B3" font-size="9.5">profissional</text>
+          <text x="626" y="145" text-anchor="middle">Assinatura</text>
+          <text x="626" y="161" text-anchor="middle" fill="#7FA0B3" font-size="9.5">registrada</text>
+          <text x="794" y="95" text-anchor="middle">Entrega</text>
+          <text x="794" y="112" text-anchor="middle" fill="#7FA0B3" font-size="9.5">PDF + app</text>
+        </g>
+        <g stroke="#7FA0B3" stroke-width="1" marker-end="url(#a)">
+          <line x1="146" y1="100" x2="192" y2="100"/>
+          <line x1="328" y1="100" x2="374" y2="100"/>
+          <line x1="510" y1="100" x2="530" y2="70"/>
+          <path d="M560 50 L520 50 L520 150 L556 150" fill="none"/>
+          <line x1="692" y1="150" x2="738" y2="100"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="shot">
+      <img src="./assets/projeto-2-preview.png" alt="Captura de tela: fila de revisão do protótipo de saúde" loading="lazy"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="placeholder" style="display:none"><b>[ captura de tela ]</b>Adicione o arquivo <span class="mono">assets/projeto-2-preview.png</span> — print da fila de revisão do profissional<br>recomendado: 1200×750px</div>
+    </div>
+    <p class="shot-cap">FIG. — fila de revisão lado a lado: dado do cliente × ficha técnica gerada pela IA</p>
+
+    <p class="desc" style="margin-top:18px"><b>Em uma frase:</b> o modelo nunca gera item livre — só compõe a partir de um catálogo validado, e nenhuma saída chega ao cliente sem aprovação humana assinada.</p>
+
+    <div class="cta">
+      <a class="btn primary" href="./README.md#projeto-2--plataforma-de-saúde">Saiba mais →</a>
+      <a class="btn" href="./prototipo-coaching-saude.html">Abrir protótipo interativo</a>
+    </div>
+  </div>
+
+  <div class="proj">
+    <div class="proj-head"><span class="proj-num">PROJETO 03</span><span class="proj-status">Concluído</span></div>
+    <h3>Motor de busca semântica curso ↔ mercado de trabalho</h3>
+    <p class="desc">Projeto de fellowship (Inova Talentos/Itaú): pipeline de embeddings com FAISS conectando o catálogo de cursos do SENAI à demanda real de mercado de trabalho, permitindo correspondência semântica em vez de busca por palavra-chave exata.</p>
+    <div class="stack"><span>Python</span><span>FAISS</span><span>Embeddings</span><span>NLP</span></div>
+    <div class="shot">
+      <img src="./assets/projeto-3-preview.png" alt="Captura de tela: resultado da busca semântica" loading="lazy"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="placeholder" style="display:none"><b>[ captura de tela ]</b>Adicione o arquivo <span class="mono">assets/projeto-3-preview.png</span> — print do notebook/resultado, se disponível (opcional)</div>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="./README.md#projeto-3--busca-semântica">Saiba mais →</a>
+    </div>
+  </div>
+
+  <div class="proj">
+    <div class="proj-head"><span class="proj-num">PROJETO 04</span><span class="proj-status">Em desenvolvimento · 9+ meses</span></div>
+    <h3>Sprout — coach educacional com fit por desafio real</h3>
+    <p class="desc">Plataforma de educação digital "student-first" para quem está começando ou migrando de carreira em tecnologia: trilha técnica + inglês, parcerias B2B com empresas e headhunting via IA — o match não é por currículo, é por como o candidato resolve desafios reais que as empresas parceiras já enfrentam, sempre com validação humana antes de qualquer indicação seguir adiante.</p>
+    <div class="stack"><span>Classificação por arquétipo</span><span>Banco de desafios validado</span><span>Revisão humana</span><span>Parcerias B2B</span></div>
+    <div class="shot">
+      <img src="./assets/projeto-4-preview.png" alt="Captura de tela: plataforma Sprout" loading="lazy"
+        onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="placeholder" style="display:none"><b>[ captura de tela ]</b>Adicione o arquivo <span class="mono">assets/projeto-4-preview.png</span> — print da plataforma ou do MVP<br>recomendado: 1200×750px</div>
+    </div>
+    <div class="cta">
+      <a class="btn primary" href="./README.md#projeto-4--sprout">Saiba mais →</a>
+    </div>
+  </div>
+</section>
+
+<section class="contact-cta" id="contato" style="border-bottom:none">
+  <div class="wrap">
+    <p class="eyebrow" style="color:var(--copper)">06 — Contato</p>
+    <h2>Vamos conversar</h2>
+    <p>Aberto a conversas sobre arquitetura de IA aplicada, sistemas multiagente em produção e inteligência de mercado orientada a dados.</p>
+    <div class="cta" style="justify-content:center">
+      <a class="btn primary" href="mailto:seuemail@exemplo.com">Enviar e-mail</a>
+      <a class="btn" href="https://linkedin.com/in/seu-perfil">LinkedIn</a>
+      <a class="btn" href="https://github.com/seu-usuario">GitHub</a>
+    </div>
+  </div>
+</section>
+
+<footer class="wrap">
+  <span>Will Costa · Analista de Inteligência de Dados e Mercado</span>
+  <span>Maceió, AL — Brasil</span>
+</footer>
+</div>
+</body>
+</html>

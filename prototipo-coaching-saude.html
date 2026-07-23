@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Protótipo — acompanhamento com IA e revisão humana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0E1216; --ink-2:#171D24; --ink-3:#222A33;
+  --slate:#8C9AA8; --slate-2:#B8C4CF; --wash:#F6F5F2; --paper:#FFFFFF;
+  --line:#E3E0D9; --line-dark:#2C3641;
+  --text:#1B1F24; --text-2:#6B7280;
+  --mint:#3FA98C; --mint-soft:#E2F0EA;
+  --amber:#D8971F; --amber-soft:#FAEFD8;
+  --rose:#D4574C; --rose-soft:#FBE9E7;
+  --sans:'Instrument Sans',system-ui,sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--sans);background:var(--wash);color:var(--text);-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+input,textarea,select{font-family:inherit;font-size:14px}
+:focus-visible{outline:2px solid var(--mint);outline-offset:2px}
+
+header{padding:20px 24px;border-bottom:1px solid var(--line);background:var(--paper);
+  display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}
+h1{font-size:16px;font-weight:600;margin:0;letter-spacing:-.01em}
+header p{margin:2px 0 0;font-size:13px;color:var(--text-2)}
+.meters{display:flex;gap:20px;flex-wrap:wrap}
+.meter{min-width:96px}
+.meter span{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+  text-transform:uppercase;color:var(--text-2)}
+.meter strong{font-family:var(--mono);font-size:19px;font-weight:500;letter-spacing:-.02em}
+.meter.live strong{color:var(--mint)}
+
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);min-height:calc(100vh - 78px)}
+@media(max-width:900px){main{grid-template-columns:1fr}}
+
+.pane-head{display:flex;align-items:baseline;gap:10px;padding:14px 20px}
+.pane-head h2{font-size:13px;font-weight:600;margin:0}
+.pane-head em{font-style:normal;font-family:var(--mono);font-size:11px;color:var(--text-2)}
+
+.client{background:var(--wash);border-right:1px solid var(--line);display:flex;flex-direction:column}
+.thread{flex:1;padding:8px 20px 20px;overflow-y:auto;display:flex;flex-direction:column;gap:10px;max-height:70vh}
+.msg{max-width:82%;padding:10px 13px;border-radius:14px;font-size:14px;line-height:1.5;white-space:pre-wrap}
+.msg.them{background:var(--paper);border:1px solid var(--line);border-bottom-left-radius:4px;align-self:flex-start}
+.msg.me{background:var(--mint-soft);border-bottom-right-radius:4px;align-self:flex-end}
+.msg.sys{align-self:center;background:none;border:1px dashed var(--line);color:var(--text-2);
+  font-family:var(--mono);font-size:11px;text-align:center;border-radius:6px;padding:6px 10px}
+.msg b{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--text-2);font-weight:500;margin-bottom:4px}
+.composer{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);background:var(--paper)}
+.composer input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:20px;background:var(--wash)}
+.composer button{padding:10px 16px;border:none;border-radius:20px;background:var(--ink);color:#fff;font-size:14px}
+.sim{display:flex;gap:8px;padding:0 20px 16px;flex-wrap:wrap}
+.sim button{padding:7px 12px;border:1px solid var(--line);background:var(--paper);
+  border-radius:16px;font-size:12px;color:var(--text-2)}
+.sim button:hover{border-color:var(--ink);color:var(--text)}
+
+.pro{background:var(--ink);color:var(--slate-2);display:flex;flex-direction:column}
+.pro .pane-head h2{color:#fff}
+.pro .pane-head em{color:var(--slate)}
+.queue{padding:0 20px 24px;overflow-y:auto}
+.case{background:var(--ink-2);border:1px solid var(--line-dark);border-radius:10px;
+  padding:14px;margin-bottom:12px}
+.case.open{border-color:var(--mint)}
+.case-top{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.tag{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 7px;border-radius:4px}
+.tag.wait{background:var(--amber-soft);color:#7A5309}
+.tag.esc{background:var(--rose-soft);color:#7C2B23}
+.tag.ok{background:var(--mint-soft);color:#1C5F4C}
+.case h3{font-size:14px;font-weight:600;margin:0;color:#fff;flex:1}
+.case .meta{font-family:var(--mono);font-size:11px;color:var(--slate)}
+.plan{font-size:13px;line-height:1.65;color:var(--slate-2);white-space:pre-wrap;
+  border-left:2px solid var(--line-dark);padding-left:12px;margin:10px 0}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.compare .col{background:var(--ink);border:1px solid var(--line-dark);border-radius:8px;padding:10px 11px}
+.compare .col h4{margin:0 0 7px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--slate);font-weight:500}
+.compare .col p,.compare .col div{font-size:12px;line-height:1.6;color:var(--slate-2);white-space:pre-wrap;margin:0}
+.compare .col .resumo{color:var(--mint);margin-bottom:6px;font-style:italic}
+.assinatura{font-family:var(--mono);font-size:11px;color:var(--mint);margin-top:8px;padding-top:8px;border-top:1px dashed var(--line-dark)}
+.flags{list-style:none;padding:0;margin:10px 0 0;display:flex;flex-direction:column;gap:5px}
+.flags li{font-size:12px;color:var(--amber);padding-left:14px;position:relative;line-height:1.4}
+.flags li::before{content:'';position:absolute;left:0;top:6px;width:5px;height:5px;
+  border-radius:50%;background:var(--amber)}
+.actions{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.actions button{padding:8px 14px;border-radius:7px;font-size:13px;border:1px solid var(--line-dark);
+  background:transparent;color:var(--slate-2)}
+.actions button:hover{border-color:var(--slate)}
+.actions button.primary{background:var(--mint);border-color:var(--mint);color:#06231B;font-weight:500}
+.edit{display:flex;gap:8px;margin-top:10px}
+.edit input{flex:1;padding:9px 11px;border-radius:7px;border:1px solid var(--line-dark);
+  background:var(--ink);color:#fff}
+.edit input::placeholder{color:var(--slate)}
+.empty{border:1px dashed var(--line-dark);border-radius:10px;padding:24px;text-align:center;
+  font-size:13px;color:var(--slate)}
+
+.setup{padding:0 20px 20px;display:grid;gap:10px}
+.setup label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--text-2)}
+.setup input,.setup textarea,.setup select{width:100%;padding:9px 11px;border:1px solid var(--line);
+  border-radius:7px;background:var(--paper)}
+.setup textarea{min-height:64px;resize:vertical;line-height:1.5}
+.setup button{padding:11px;border:none;border-radius:7px;background:var(--ink);color:#fff;font-size:14px;font-weight:500}
+.setup button:disabled{opacity:.5;cursor:wait}
+.hint{font-size:12px;color:var(--text-2);line-height:1.5;margin:0}
+.dots::after{content:'';animation:d 1.2s infinite steps(4)}
+@keyframes d{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+@media(prefers-reduced-motion:reduce){.dots::after{animation:none;content:'...'}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Acompanhamento com IA e revisão humana</h1>
+    <p>Protótipo do ciclo: cliente → IA → profissional aprova → entrega</p>
+  </div>
+  <div class="meters">
+    <div class="meter live"><span>Min. do profissional</span><strong id="m-min">0,0</strong></div>
+    <div class="meter"><span>Mensagens</span><strong id="m-msg">0</strong></div>
+    <div class="meter"><span>Escalonamentos</span><strong id="m-esc">0</strong></div>
+    <div class="meter"><span>Custo estimado</span><strong id="m-cost">R$ 0,00</strong></div>
+  </div>
+</header>
+
+<main>
+  <section class="client">
+    <div class="pane-head"><h2>Cliente</h2><em>whatsapp</em></div>
+
+    <div class="setup" id="setup-catalogo">
+      <p class="hint">Antes do cliente: cadastro das duas bibliotecas, feito uma vez pela <b style="color:var(--text)">nutricionista</b> e pelo <b style="color:var(--text)">personal trainer</b> — cada um cuida da própria, mas ficam ligadas ao mesmo arquétipo de cliente, para nunca contradizerem uma à outra.</p>
+      <div><label for="f-cat-nutri">Catálogo de refeições (nome | tipo | kcal por porção-base | proteína por porção-base | tags)</label>
+        <textarea id="f-cat-nutri" style="min-height:130px;font-family:var(--mono);font-size:12px;">Omelete com pão integral | café | 320 | 22 | sem_lactose
+Iogurte vegetal com aveia e fruta | café | 280 | 14 | vegano, sem_lactose
+Vitamina de banana com whey | café | 310 | 28 |
+Frango grelhado com batata doce e salada | almoço | 450 | 38 | sem_peixe
+Carne moída com arroz integral e legumes | almoço | 480 | 34 | sem_peixe
+Grão de bico refogado com quinoa | almoço | 420 | 20 | vegano, sem_lactose
+Omelete com legumes | jantar | 300 | 24 | sem_lactose
+Sopa de lentilha com legumes | jantar | 260 | 16 | vegano
+Wrap de frango com salada | jantar | 350 | 30 | sem_peixe
+Mix de castanhas | lanche | 180 | 6 | vegano, sem_lactose
+Iogurte com granola | lanche | 200 | 10 | sem_lactose</textarea>
+      </div>
+      <div><label for="f-cat-personal">Catálogo de exercícios (nome | grupo muscular | séries x reps base | equipamento necessário)</label>
+        <textarea id="f-cat-personal" style="min-height:130px;font-family:var(--mono);font-size:12px;">Agachamento livre | pernas | 3x12, sem carga externa | sem_equipamento
+Afundo alternado | pernas | 3x10 cada perna | sem_equipamento
+Flexão de braço | peito | 3x até falha | sem_equipamento
+Prancha abdominal | core | 3x40s | sem_equipamento
+Elevação pélvica | gluteo | 3x15 | sem_equipamento
+Remada com elástico | costas | 3x15 | precisa_elastico
+Agachamento com barra | pernas | 4x8, carga progressiva | precisa_academia
+Supino com halteres | peito | 4x10 | precisa_academia
+Puxada na polia | costas | 4x10 | precisa_academia
+Corrida leve | cardio | 20min ritmo confortável | sem_equipamento</textarea>
+      </div>
+      <button id="btn-catalogo">Salvar catálogos e continuar</button>
+    </div>
+
+    <div class="setup" id="setup" hidden>
+      <p class="hint">Agora a anamnese da cliente. O plano só vai usar itens dos catálogos já cadastrados.</p>
+      <div><label for="f-nome">Nome</label><input id="f-nome" value="Camila" autocomplete="off"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;">
+        <div><label for="f-peso">Peso (kg)</label><input id="f-peso" type="number" value="78" autocomplete="off"></div>
+        <div><label for="f-alt">Altura (cm)</label><input id="f-alt" type="number" value="165" autocomplete="off"></div>
+        <div><label for="f-idade">Idade</label><input id="f-idade" type="number" value="34" autocomplete="off"></div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><label for="f-sexo">Sexo biológico</label>
+          <select id="f-sexo"><option value="F">Feminino</option><option value="M">Masculino</option></select></div>
+        <div><label for="f-nivel">Nível de atividade</label>
+          <select id="f-nivel">
+            <option value="1.2">Sedentária</option>
+            <option value="1.375" selected>Leve (1-3x/sem)</option>
+            <option value="1.55">Moderada (3-5x/sem)</option>
+            <option value="1.725">Intensa (6-7x/sem)</option>
+          </select></div>
+      </div>
+      <div><label for="f-equip">Equipamento disponível</label>
+        <select id="f-equip"><option value="sem">Sem equipamento (casa)</option><option value="com">Academia</option></select></div>
+      <div><label for="f-obj">Objetivo</label><input id="f-obj" value="perder peso e ter mais energia" autocomplete="off"></div>
+      <div><label for="f-rot">Rotina e restrições</label><textarea id="f-rot">Trabalho em escala 12x36 no hospital, às vezes entro às 19h. Não como peixe. Treino em casa, 3x por semana, sem equipamento.</textarea></div>
+      <div><label>Quer acompanhamento de</label>
+        <div style="display:flex;gap:16px;padding-top:4px;">
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--sans);font-size:14px;color:var(--text);">
+            <input type="checkbox" id="f-quer-nutri" checked style="width:auto;"> Nutricionista</label>
+          <label style="display:flex;align-items:center;gap:6px;text-transform:none;font-family:var(--sans);font-size:14px;color:var(--text);">
+            <input type="checkbox" id="f-quer-personal" checked style="width:auto;"> Personal trainer</label>
+        </div>
+      </div>
+      <p class="hint" id="f-meta" style="font-family:var(--mono);"></p>
+      <button id="btn-gerar">Gerar plano</button>
+
+    </div>
+
+    <div class="thread" id="thread"></div>
+    <div class="sim" id="sim" hidden>
+      <button data-sim="silencio">Sumiu por 3 dias</button>
+      <button data-sim="vitoria">Cumpriu a semana</button>
+      <button data-sim="evento">Vai a um aniversário</button>
+      <button data-sim="sintoma">Relata um sintoma</button>
+    </div>
+    <div class="composer" id="composer" hidden>
+      <input id="f-msg" placeholder="Escreva como se fosse a cliente" autocomplete="off">
+      <button id="btn-env">Enviar</button>
+    </div>
+  </section>
+
+  <section class="pro">
+    <div class="pane-head"><h2>Painel do profissional</h2><em>fila de revisão</em></div>
+    <div class="queue" id="queue">
+      <div class="empty">A fila está vazia. Gere um plano ao lado para ver o primeiro caso chegar.</div>
+    </div>
+  </section>
+</main>
+
+<script>
+const S={nome:'',obj:'',rot:'',plano:null,aprovado:{nutricionista:false,'personal trainer':false},fila:[],min:0,msg:0,esc:0,timer:null,catalogoNutri:[],catalogoPersonal:[]};
+const $=id=>document.getElementById(id);
+
+const CATALOGO_NUTRI=`Omelete com pão integral | café | 320 | 22 | sem_lactose
+Iogurte vegetal com aveia e fruta | café | 280 | 14 | vegano, sem_lactose
+Vitamina de banana com whey | café | 310 | 28 |
+Frango grelhado com batata doce e salada | almoço | 450 | 38 | sem_peixe
+Carne moída com arroz integral e legumes | almoço | 480 | 34 | sem_peixe
+Grão de bico refogado com quinoa | almoço | 420 | 20 | vegano, sem_lactose
+Omelete com legumes | jantar | 300 | 24 | sem_lactose
+Sopa de lentilha com legumes | jantar | 260 | 16 | vegano
+Wrap de frango com salada | jantar | 350 | 30 | sem_peixe
+Mix de castanhas | lanche | 180 | 6 | vegano, sem_lactose
+Iogurte com granola | lanche | 200 | 10 | sem_lactose`;
+const CATALOGO_PERSONAL=`Agachamento livre | pernas | 3x12, sem carga externa | sem_equipamento
+Afundo alternado | pernas | 3x10 cada perna | sem_equipamento
+Flexão de braço | peito | 3x até falha | sem_equipamento
+Prancha abdominal | core | 3x40s | sem_equipamento
+Elevação pélvica | gluteo | 3x15 | sem_equipamento
+Remada com elástico | costas | 3x15 | precisa_elastico
+Agachamento com barra | pernas | 4x8, carga progressiva | precisa_academia
+Supino com halteres | peito | 4x10 | precisa_academia
+Puxada na polia | costas | 4x10 | precisa_academia
+Corrida leve | cardio | 20min ritmo confortável | sem_equipamento`;
+
+// Cada linha é um caso-padrão já validado uma vez pelo profissional — não é decisão
+// nova por cliente, é classificação dentro de uma tabela fechada.
+const ARQUETIPOS={
+  'emagrecimento_sem_equip':{nome:'Emagrecimento — iniciante, sem equipamento',
+    deficit:-400,proteinaMult:1.8,treino:'3x/semana, peso corporal, corpo inteiro, progressão por repetições'},
+  'emagrecimento_com_equip':{nome:'Emagrecimento — com academia',
+    deficit:-400,proteinaMult:1.8,treino:'4x/semana, carga progressiva, superior/inferior'},
+  'ganho_massa':{nome:'Ganho de massa — iniciante',
+    deficit:300,proteinaMult:2.0,treino:'4x/semana, carga progressiva, corpo inteiro'},
+  'saude_geral':{nome:'Saúde geral — manutenção',
+    deficit:0,proteinaMult:1.4,treino:'2-3x/semana, força leve e mobilidade'},
+};
+function classificarArquetipo(objetivoTexto,equip){
+  const t=objetivoTexto.toLowerCase();
+  let chave;
+  if(/emagre|perder peso|perder gordura|secar/.test(t))chave=equip==='com'?'emagrecimento_com_equip':'emagrecimento_sem_equip';
+  else if(/massa|ganhar|hipertrofia|bulking/.test(t))chave='ganho_massa';
+  else chave='saude_geral';
+  return {chave,...ARQUETIPOS[chave]};
+}
+
+const PROFISSIONAIS={
+  nutricionista:{nome:'Dra. Beatriz Lima',registro:'CRN-6 12345'},
+  'personal trainer':{nome:'Rafael Souza',registro:'CREF 054321-G/AL'}
+};
+function dadosClienteTexto(){
+  const m=S.meta;
+  return `Peso: ${m?m.peso:'-'}kg · Altura: ${m?m.altura:'-'}cm · Idade: ${m?m.idade:'-'} anos
+Objetivo declarado: "${S.obj}"
+Rotina e restrições: "${S.rot}"
+Arquétipo classificado: ${m&&m.arquetipo?m.arquetipo.nome:'-'}
+Meta calculada: ${m?m.kcal+' kcal · '+m.proteina+'g proteína':'-'}`;
+}
+
+
+function calcMeta(){
+  const p=+$('f-peso').value,a=+$('f-alt').value,i=+$('f-idade').value,
+    sexo=$('f-sexo').value,nivel=+$('f-nivel').value,equip=$('f-equip').value,
+    obj=$('f-obj').value.trim();
+  if(!p||!a||!i){$('f-meta').textContent='';return null}
+  const tmb=sexo==='F'?(10*p+6.25*a-5*i-161):(10*p+6.25*a-5*i+5);
+  const manutencao=tmb*nivel;
+  const arq=classificarArquetipo(obj,equip);
+  const kcal=Math.round(manutencao+arq.deficit);
+  const proteina=Math.round(p*arq.proteinaMult);
+  $('f-meta').innerHTML=`Arquétipo: <b>${arq.nome}</b><br>Meta: ~${kcal} kcal/dia · ~${proteina}g proteína · treino de referência: ${arq.treino}`;
+  return {kcal,proteina,peso:p,altura:a,idade:i,sexo,nivel,arquetipo:arq};
+}
+
+
+function parseCatalogo(texto){
+  return texto.split('\n').map(l=>l.trim()).filter(Boolean).map(l=>{
+    const [nome,tipo,kcal,proteina,tags]=l.split('|').map(s=>(s||'').trim());
+    return {nome,tipo,kcal:+kcal||0,proteina:+proteina||0,
+      tags:(tags||'').split(',').map(t=>t.trim()).filter(Boolean)};
+  });
+}
+function catalogoParaPrompt(cat){
+  return cat.map(i=>`- ${i.nome} [${i.tipo}, ${i.kcal}kcal, ${i.proteina}g proteína${i.tags.length?', '+i.tags.join(', '):''}]`).join('\n');
+}
+// confere se todo item citado no plano do modelo realmente existe no catálogo
+function validarContraCatalogo(textoPlano,cat){
+  const nomes=cat.map(i=>i.nome.toLowerCase());
+  const linhas=textoPlano.split('\n').map(l=>l.trim()).filter(Boolean);
+  const foraDoCatalogo=[];
+  linhas.forEach(l=>{
+    const temItemConhecido=nomes.some(n=>l.toLowerCase().includes(n));
+    const pareceItemDeComida=/\b(com|grelhad|refogad|cozid|assad|salada|arroz|frango|carne|peixe|ovo|pão|iogurte|sopa)\b/i.test(l);
+    if(pareceItemDeComida&&!temItemConhecido)foraDoCatalogo.push(l);
+  });
+  return foraDoCatalogo;
+}
+function metrics(){
+  $('m-min').textContent=S.min.toFixed(1).replace('.',',');
+  $('m-msg').textContent=S.msg;
+  $('m-esc').textContent=S.esc;
+  const custo=(S.min/60)*80 + S.msg*0.05;
+  $('m-cost').textContent='R$ '+custo.toFixed(2).replace('.',',');
+}
+function clock(on){
+  if(on&&!S.timer){S.timer=setInterval(()=>{S.min+=1/60;metrics()},1000)}
+  if(!on&&S.timer){clearInterval(S.timer);S.timer=null}
+}
+
+function say(txt,who,label){
+  const d=document.createElement('div');
+  d.className='msg '+who;
+  d.textContent=txt;
+  if(label){const b=document.createElement('b');b.textContent=label;d.prepend(b)}
+  $('thread').appendChild(d);
+  $('thread').scrollTop=$('thread').scrollHeight;
+  if(who==='them')S.msg++,metrics();
+  return d;
+}
+function thinking(){return say('escrevendo','them')}
+
+async function ask(prompt,system){
+  const body={model:'claude-sonnet-4-6',max_tokens:1000,messages:[{role:'user',content:prompt}]};
+  if(system)body.system=system;
+  const r=await fetch('https://api.anthropic.com/v1/messages',
+    {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const d=await r.json();
+  return d.content.filter(c=>c.type==='text').map(c=>c.text).join('\n');
+}
+function parse(txt){
+  const clean=txt.replace(/```json|```/g,'').trim();
+  try{return JSON.parse(clean)}catch(e){
+    const m=clean.match(/\{[\s\S]*\}/);
+    if(m){try{return JSON.parse(m[0])}catch(e2){}}
+    return null;
+  }
+}
+const contexto=()=>`Cliente: ${S.nome}. Objetivo: ${S.obj}. Rotina e restrições: ${S.rot}.`;
+
+async function gerarPlanoDisciplina(disciplina,ajuste){
+  const ehPersonal=disciplina==='personal trainer';
+  const cat=ehPersonal?S.catalogoPersonal:S.catalogoNutri;
+  const arq=S.meta.arquetipo;
+  const outraDisciplina=ehPersonal?'nutricionista':'personal trainer';
+  const outroPlano=S.planos&&S.planos[outraDisciplina];
+  const metaTxt=ehPersonal
+    ?`Peso ${S.meta.peso}kg, ${S.meta.idade} anos. Arquétipo classificado: ${arq.nome}. Diretriz de treino já validada: ${arq.treino}.`
+    :`Arquétipo classificado: ${arq.nome}. Meta diária já calculada pelo protocolo validado: ${S.meta.kcal} kcal, ${S.meta.proteina}g de proteína.`;
+  const sinergiaTxt=outroPlano
+    ?`\nPlano já definido pel${ehPersonal?'a nutricionista':'o personal trainer'} para este MESMO cliente — mantenha coerência com ele, não contradiga:\n${outroPlano.plano}\n`
+    :'';
+  const instrucaoEscala=ehPersonal
+    ?'Siga a diretriz de treino do arquétipo (frequência e progressão) — já foi validada, não a questione. Escale séries/repetições do catálogo para o nível e peso desta pessoa. Não invente equipamento — priorize itens sem_equipamento quando a rotina não citar academia.'
+    :'A meta de kcal e proteína já foi calculada pelo protocolo validado — não a questione. Ajuste o TAMANHO DA PORÇÃO de cada item do catálogo para bater com essa meta. Não invente prato novo.';
+  const p=`Você apoia um(a) ${disciplina} montando o plano desta pessoa.
+${contexto()}
+${metaTxt}
+${sinergiaTxt}
+CATÁLOGO — a única fonte de ${ehPersonal?'exercícios':'refeições'} permitida. Nunca cite item que não esteja nesta lista:
+${catalogoParaPrompt(cat)}
+
+${S.planos&&S.planos[disciplina]?'Plano atual:\n'+S.planos[disciplina].plano+'\nAjuste pedido pelo profissional: '+ajuste:''}
+
+${instrucaoEscala}
+Se nenhum item do catálogo servir para algum momento, diga isso explicitamente em vez de inventar.
+
+Responda SOMENTE com JSON, sem markdown:
+{"resumo":"uma frase sobre a lógica da escolha e, se houver plano da outra disciplina, como este se encaixa com ele","plano":"o plano em texto corrido curto, citando os nomes dos itens exatamente como estão no catálogo, com quebras de linha por bloco","pontos":["até 3 pontos que exigem julgamento profissional"]}`;
+  const r=parse(await ask(p));
+  if(r&&r.plano){
+    const fora=validarContraCatalogo(r.plano,cat);
+    if(fora.length){
+      r.pontos=[...(r.pontos||[]),'Validador encontrou possível item fora do catálogo: "'+fora[0].slice(0,60)+'…" — revisar antes de aprovar.'];
+    }
+  }
+  return r;
+}
+
+function renderFila(){
+  const q=$('queue');
+  if(!S.fila.length){q.innerHTML='<div class="empty">Nada aguardando revisão.</div>';clock(false);return}
+  q.innerHTML='';
+  S.fila.forEach((c,i)=>{
+    const el=document.createElement('div');
+    el.className='case'+(c.tipo==='plano'?' open':'');
+    const flags=(c.pontos||[]).map(p=>`<li>${p}</li>`).join('');
+    const compare=c.tipo==='plano'?`
+      <div class="compare">
+        <div class="col"><h4>Dados do cliente</h4><div>${c.dadosCliente}</div></div>
+        <div class="col"><h4>Ficha técnica gerada pela IA</h4>
+          <div class="resumo">${c.resumo||''}</div>
+          <div>${c.corpo}</div>
+        </div>
+      </div>`:`<div class="plan">${c.corpo}</div>`;
+    el.innerHTML=`
+      <div class="case-top">
+        <h3>${S.nome}</h3>
+        ${c.disciplina?`<span class="tag ok">${c.disciplina}</span>`:''}
+        <span class="tag ${c.tipo==='escalonamento'?'esc':'wait'}">${c.tipo==='escalonamento'?'escalonamento':'aguardando revisão'}</span>
+      </div>
+      <div class="meta">${c.meta}</div>
+      ${compare}
+      ${flags?`<ul class="flags">${flags}</ul>`:''}
+      <div class="actions">
+        ${c.tipo==='plano'?`<button class="primary" data-a="aprovar" data-i="${i}">Analisar dados, chancelar e enviar</button>`
+        :`<button class="primary" data-a="responder" data-i="${i}">Responder eu mesma</button>`}
+      </div>
+      ${c.tipo==='plano'?`<div class="edit">
+        <input placeholder="Ajuste em linguagem natural" data-edit="${i}">
+        <button data-a="ajustar" data-i="${i}">Reescrever</button></div>`:''}`;
+    q.appendChild(el);
+  });
+  clock(true);
+}
+
+$('queue').addEventListener('click',async e=>{
+  const b=e.target.closest('button[data-a]');if(!b)return;
+  const i=+b.dataset.i,c=S.fila[i];
+  if(b.dataset.a==='aprovar'){
+    S.aprovado[c.disciplina]=true;S.fila.splice(i,1);
+    const prof=PROFISSIONAIS[c.disciplina];
+    const agora=new Date().toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'});
+    if(S.planos[c.disciplina]){S.planos[c.disciplina].assinadoPor=prof;S.planos[c.disciplina].assinadoEm=agora;}
+    renderFila();
+    say('Seu plano de '+c.disciplina+' está pronto, revisado e assinado.\n\n'+c.corpo+
+      '\n\n— Chancelado por '+prof.nome+' ('+prof.registro+') em '+agora,
+      'them','plano aprovado — '+c.disciplina);
+    $('composer').hidden=false;$('sim').hidden=false;
+  }
+  if(b.dataset.a==='ajustar'){
+    const inp=document.querySelector(`input[data-edit="${i}"]`);
+    if(!inp.value.trim())return;
+    b.textContent='Reescrevendo…';b.disabled=true;
+    const novo=await gerarPlanoDisciplina(c.disciplina,inp.value.trim());
+    if(novo){S.planos[c.disciplina]=novo;c.corpo=novo.plano;c.pontos=novo.pontos;c.resumo=novo.resumo;c.meta='plano reescrito após ajuste do profissional — '+c.disciplina}
+    renderFila();
+  }
+  if(b.dataset.a==='responder'){
+    S.fila.splice(i,1);renderFila();
+    say('Aqui é a equipe. Vi sua mensagem e vou te responder pessoalmente — não siga nenhuma orientação automática até lá.','them','mensagem do profissional');
+  }
+});
+
+$('btn-catalogo').addEventListener('click',()=>{
+  S.catalogoNutri=parseCatalogo($('f-cat-nutri').value);
+  S.catalogoPersonal=parseCatalogo($('f-cat-personal').value);
+  if(!S.catalogoNutri.length&&!S.catalogoPersonal.length){alert('Cadastre pelo menos um item em algum dos catálogos.');return}
+  $('setup-catalogo').hidden=true;$('setup').hidden=false;
+  calcMeta();
+});
+['f-peso','f-alt','f-idade','f-sexo','f-nivel','f-equip','f-obj'].forEach(id=>$(id).addEventListener('input',calcMeta));
+
+$('btn-gerar').addEventListener('click',async()=>{
+  const querNutri=$('f-quer-nutri').checked,querPersonal=$('f-quer-personal').checked;
+  if(!querNutri&&!querPersonal){alert('Marque ao menos um profissional.');return}
+  S.nome=$('f-nome').value.trim()||'Cliente';
+  S.obj=$('f-obj').value.trim();S.rot=$('f-rot').value.trim();
+  S.meta=calcMeta();S.planos={};
+  const b=$('btn-gerar');b.disabled=true;b.textContent='Gerando…';
+  if(querNutri){
+    const rn=await gerarPlanoDisciplina('nutricionista');
+    if(rn)S.planos.nutricionista=rn;
+  }
+  if(querPersonal){
+    const rp=await gerarPlanoDisciplina('personal trainer');
+    if(rp)S.planos['personal trainer']=rp;
+  }
+  b.disabled=false;b.textContent='Gerar plano';
+  if(!S.planos.nutricionista&&!S.planos['personal trainer']){alert('A resposta não veio no formato esperado. Tente de novo.');return}
+  $('setup').hidden=true;
+  const quem=[querNutri?'nutricionista':null,querPersonal?'personal trainer':null].filter(Boolean).join(' e ');
+  say('Anamnese registrada. Seu plano foi montado e está com '+(quem.includes(' e ')?'sua '+quem.replace(' e ',' e seu '):'sua '+quem)+' para revisão.','sys');
+  const arqTxt=S.meta&&S.meta.arquetipo?'Arquétipo: '+S.meta.arquetipo.nome+' — ':'';
+  if(S.planos.nutricionista){
+    S.fila.push({tipo:'plano',disciplina:'nutricionista',meta:arqTxt+S.planos.nutricionista.resumo,resumo:S.planos.nutricionista.resumo,dadosCliente:dadosClienteTexto(),corpo:S.planos.nutricionista.plano,pontos:S.planos.nutricionista.pontos});
+  }
+  if(S.planos['personal trainer']){
+    S.fila.push({tipo:'plano',disciplina:'personal trainer',meta:arqTxt+S.planos['personal trainer'].resumo,resumo:S.planos['personal trainer'].resumo,dadosCliente:dadosClienteTexto(),corpo:S.planos['personal trainer'].plano,pontos:S.planos['personal trainer'].pontos});
+  }
+  renderFila();
+});
+
+async function conversar(texto){
+  say(texto,'me');
+  const t=thinking();t.classList.add('dots');
+  const aprovados=Object.keys(S.aprovado).filter(d=>S.aprovado[d]);
+  const planosTxt=aprovados.map(d=>`Plano de ${d} aprovado:\n${S.planos[d].plano}`).join('\n\n');
+  const catalogosTxt=[
+    S.catalogoNutri.length?'Catálogo de refeições:\n'+catalogoParaPrompt(S.catalogoNutri):'',
+    S.catalogoPersonal.length?'Catálogo de exercícios:\n'+catalogoParaPrompt(S.catalogoPersonal):''
+  ].filter(Boolean).join('\n\n');
+  const p=`Você é o assistente de acompanhamento de ${S.nome}, operando dentro de planos JÁ APROVADOS.
+${contexto()}
+${planosTxt}
+
+${catalogosTxt}
+
+Mensagem da cliente: "${texto}"
+
+Regras: responda apenas dentro do que os planos já preveem. Se sugerir troca de refeição ou exercício, use somente itens dos catálogos acima. Nunca diagnostique, nunca sugira medicação ou suplemento, nunca avalie sintoma.
+Se a mensagem mencionar sintoma, dor, medicação, sofrimento psíquico, gravidez ou qualquer coisa fora do escopo, escale.
+Responda SOMENTE com JSON: {"escalar":true|false,"motivo":"por que escalou, ou vazio","resposta":"resposta curta e calorosa em no máximo 3 frases"}`;
+  const r=parse(await ask(p));
+  t.remove();S.msg--;
+  if(!r){say('Não consegui processar agora. Tenta de novo?','them');return}
+  if(r.escalar){
+    S.esc++;metrics();
+    say('Isso é importante e eu não sou quem deve te responder. Já avisei a equipe — alguém te retorna em breve.','them');
+    S.fila.unshift({tipo:'escalonamento',meta:r.motivo||'sinal fora do escopo automático',corpo:'Mensagem da cliente: "'+texto+'"'});
+    renderFila();
+  }else{
+    say(r.resposta,'them');
+  }
+}
+
+$('btn-env').addEventListener('click',()=>{
+  const v=$('f-msg').value.trim();if(!v)return;$('f-msg').value='';conversar(v);
+});
+$('f-msg').addEventListener('keydown',e=>{if(e.key==='Enter')$('btn-env').click()});
+
+const sims={
+  silencio:async()=>{
+    say('3 dias sem nenhum registro da cliente','sys');
+    const t=thinking();t.classList.add('dots');
+    const r=await ask(`${contexto()}
+A cliente não registra nada há 3 dias. Escreva UM nudge de WhatsApp: leve, sem cobrança nem culpa, no máximo 2 frases, terminando com uma pergunta que ela responda em um toque. Responda só com o texto da mensagem.`);
+    t.remove();S.msg--;say(r.trim(),'them','nudge automático');
+  },
+  vitoria:async()=>{
+    say('Cliente cumpriu os 7 dias do plano','sys');
+    const t=thinking();t.classList.add('dots');
+    const r=await ask(`${contexto()}
+A cliente cumpriu a semana inteira do plano. Escreva UM reforço positivo de WhatsApp, específico e sem exagero, no máximo 2 frases. Só o texto.`);
+    t.remove();S.msg--;say(r.trim(),'them','nudge automático');
+  },
+  evento:()=>conversar('to indo num aniversário hoje à noite, o que eu faço?'),
+  sintoma:()=>conversar('acordei com uma dor de cabeça forte e meio tonta, será que é do plano?')
+};
+$('sim').addEventListener('click',e=>{const b=e.target.closest('button[data-sim]');if(b)sims[b.dataset.sim]()});
+
+metrics();
+</script>
+</body>
+</html>
